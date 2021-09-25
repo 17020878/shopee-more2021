@@ -1,0 +1,110 @@
+<?php
+/**
+ * create table
+ */
+
+function shopee_schema()
+{
+	$schema = array();
+
+      $schema['client_table'] = array(
+              'description' => 'Table for client',
+              'fields' => array(
+                  'Id' => array(
+                      'description' => 'Id auto increment.',
+                      'type' => 'serial',
+                      'unsigned' => TRUE,
+                      'not null' => TRUE,
+                  ),
+
+                  'namefileClient' => array(
+                      'description' => 'ten tep khach hang',
+                      'type' => 'varchar',
+                      'length' => 255,
+                      'not null' => TRUE,
+                  ),
+
+                  'UserId' => array(
+                      'description' => 'ID cua khach hang dang nhap vao phan mem',
+                      'type' => 'varchar',
+                      'length' => 255,
+                      'not null' => TRUE,
+                  ),
+
+                  'data' => array(
+                      'description' => 'du lieu bao gom id va ten khach hang tren shopee de follow',
+                      'type' => 'varchar',
+                      'length' => 255,
+                      'not null' => TRUE,
+                  ),
+
+              ),
+              'primary key' => array('id')
+
+          );
+
+
+          $schema['user_table'] = array(
+                        'description' => 'Table for user',
+                        'fields' => array(
+                            'Id' => array(
+                                'description' => 'Id auto increment.',
+                                'type' => 'serial',
+                                'unsigned' => TRUE,
+                                'not null' => TRUE,
+                            ),
+
+                            'name' => array(
+                                'description' => 'ten nguoi su dung phan mem',
+                                'type' => 'varchar',
+                                'length' => 255,
+                                'not null' => TRUE,
+                            ),
+
+                            'phone' => array(
+                                'description' => 'so dien thoai',
+                                'type' => 'varchar',
+                                'length' => 255,
+                                'not null' => TRUE,
+                            ),
+
+                            'mail' => array(
+                                'description' => 'mail nguoi su dung phan mem',
+                                'type' => 'varchar',
+                                'length' => 255,
+                                'not null' => TRUE,
+                            ),
+
+                            'password' => array(
+                                'description' => 'mat khau nguoi su dung phan mem',
+                                'type' => 'varchar',
+                                'length' => 255,
+                                'not null' => TRUE,
+                            ),
+
+                             'image' => array(
+                                'description' => 'avatar nguoi su dung phan mem/',
+                                'type' => 'varchar',
+                                'length' => 255,
+                                'not null' => TRUE,
+                            ),
+
+                        ),
+                        'primary key' => array('id')
+
+                    );
+
+
+
+	return $schema;
+
+}
+
+function client_install() {
+// Use schema API to create database table.
+    drupal_install_schema('shopee');
+}
+function client_uninstall() {
+// Remove tables.
+    drupal_uninstall_schema('shopee');
+}

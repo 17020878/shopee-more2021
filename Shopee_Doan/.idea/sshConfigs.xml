@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SshConfigs">
+    <configs>
+      <sshConfig authType="PASSWORD" host="shopee.whoopsbuy.com" id="dffd8c36-0dcd-4b7a-8bfc-e0b77035bfc5" port="22" customName="shopee.whoopsbuy.com" nameFormat="CUSTOM" username="shopee" />
+    </configs>
+  </component>
+</project>

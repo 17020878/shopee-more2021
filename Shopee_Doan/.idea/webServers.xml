@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="22ff55c5-875e-476e-b425-0f5113e9ad7c" name="shopee-more" url="https://shopee.whoopsbuy.com/">
+        <fileTransfer rootFolder="/home/shopee/public_html" accessType="SFTP" host="shopee.whoopsbuy.com" port="22" sshConfigId="dffd8c36-0dcd-4b7a-8bfc-e0b77035bfc5" sshConfig="shopee.whoopsbuy.com">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

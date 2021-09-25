@@ -1,0 +1,15 @@
+{
+    "name": "Follow customer Shopee",
+    "manifest_version": 2,
+    "version": "0.0.1",
+    "description": "Extension for auto follow customer on Shopee",
+    "content_scripts": [{
+       "matches": [
+          "https://shopee.vn/*"
+       ],
+       "js": [
+          "content.js"
+       ]
+    }]
+ }
+ 

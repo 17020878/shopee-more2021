@@ -1,0 +1,814 @@
+<?php
+if(!isset($_SESSION)){
+    session_start();
+}
+global $conf;
+function shopee_menu(){
+    $item['home'] = array(
+        'title' => t('home'),
+        'description' => t('Home'),
+        'page callback' => 'home',
+        'access arguments' => array('access content'),
+        'type' => MENU_CALLBACK,
+    );
+    $item['tracking'] = array(
+        'title' => t('Tracking'),
+        'description' => t('Tracking'),
+        'page callback' => 'tracking',
+        'access arguments' => array('access content'),
+        'type' => MENU_CALLBACK,
+    );
+    $item['spy_shopee'] = array(
+        'title' => t('Spy Shopee'),
+        'description' => t('Spy Shopee'),
+        'page callback' => 'spy_shopee',
+        'access arguments' => array('access content'),
+        'type' => MENU_CALLBACK,
+    );
+    $item['scan_customer'] = array(
+        'title' => t('Quét khách hàng'),
+        'description' => t('Quét khách hàng'),
+        'page callback' => 'scan_customer',
+        'access arguments' => array('access content'),
+        'type' => MENU_CALLBACK,
+    );
+    $item['follow_customer'] = array(
+        'title' => t('Tiếp cận khách hàng'),
+        'description' => t('Tiếp cận khách hàng'),
+        'page callback' => 'follow_customer',
+        'access arguments' => array('access content'),
+        'type' => MENU_CALLBACK,
+    );
+    $item['dangxuat'] = array(
+        'title' => t('Dang xuat'),
+        'description' => t('Dang xuat'),
+        'page callback' => 'dangxuat',
+        'access arguments' => array('access content'),
+        'type' => MENU_CALLBACK,
+    );
+
+    $item['ajax'] = array(
+        'title' => t('ajax'),
+        'description' => t('ajax'),
+        'page callback' => 'ajax',
+        'access arguments' => array('access content'),
+        'type' => MENU_CALLBACK,
+    );
+    return $item;
+
+}
+
+function ajax()
+{
+    global $conf;
+
+    $act = isset($_REQUEST['act']) ? $_REQUEST['act'] : null;
+
+
+    switch ($act) {
+
+        case 'tracking':
+            $keyword_tracking = isset($_REQUEST['keyword_tracking']) ? $_REQUEST['keyword_tracking'] : null;
+            $keyword_tracking = urlencode($keyword_tracking);
+            $page = isset($_REQUEST['pager']) ? $_REQUEST['pager'] : 0;
+            if ($page > 0) {
+                $newest = ($page - 1) * 50;
+            } else {
+                $newest = 0;
+            }
+            $url = "https://shopee.vn/api/v2/search_items/?by=relevancy&keyword=" . $keyword_tracking . "&limit=50&newest=" . $newest . "&order=desc&page_type=search&version=2";// "https://shopee.vn/search?keyword=%C4%91%E1%BB%93ng%20h%E1%BB%93";
+            $data = get_data_curl($url);
+            print_r(json_encode($data));
+            break;
+
+        case 'click_box_rating_comment':
+            $link = isset($_REQUEST['link']) ? $_REQUEST['link'] : null;
+            $data = get_data_curl($link);
+            $data_customize['rating'] = $data;
+            print_r(json_encode($data_customize));
+            break;
+
+        case 'spy_shopee':
+            $keyword_spy = isset($_REQUEST['keyword_spy']) ? $_REQUEST['keyword_spy'] : null;
+            $number = isset($_REQUEST['number']) ? $_REQUEST['number'] : null;
+            if ($number > 0) {
+                $newest = ($number - 1) * 30;
+            } else {
+                $newest = 0;
+            }
+            $array = explode('/', $keyword_spy);
+            $name_shop = $array[3];
+            $url_1 = 'https://shopee.vn/api/v4/shop/get_shop_detail?username=' . $name_shop;
+            $shop_id_array = get_data_curl($url_1);
+            $shop_id = $shop_id_array['data']['shopid'];
+            $shop_id = urlencode($shop_id);
+            $url_2 = "https://shopee.vn/api/v2/search_items/?by=pop&limit=30&match_id=" . $shop_id . "&newest=". $newest ."&order=desc&page_type=shop&version=2";
+            $data_url2 = get_data_curl($url_2);
+            $data = array_merge($shop_id_array, $data_url2);
+            print_r(json_encode($data));
+            break;
+
+        case 'scan_customer':
+            $keyword_scan = isset($_REQUEST['keyword_scan']) ? $_REQUEST['keyword_scan'] : null;
+            $num = isset($_REQUEST['num']) ? $_REQUEST['num'] : null;
+            if ($num > 0) {
+                $newest = ($num - 1) * 50;
+            } else {
+                $newest = 0;
+            }
+            $keyword_scan = urlencode($keyword_scan);
+            $url = "https://shopee.vn/api/v2/search_items/?by=relevancy&keyword=" . $keyword_scan . "&limit=50&newest=". $newest ."&order=desc&page_type=search&version=2";
+            //$url2 = "https://shopee.vn/api/v2/search_items/?by=relevancy&keyword=".$keyword_scan."&limit=50&newest=50&order=desc&page_type=search&version=2";
+            $data = get_data_curl($url);
+            //$data2 = get_data_curl($url2);
+            //$data = array_merge($data1['items'], $data2['items']);
+            print_r(json_encode($data));
+            break;
+
+        case 'scan_link':
+            $link_scan = isset($_REQUEST['link_scan']) ? $_REQUEST['link_scan'] : null;
+            $number_client = isset($_REQUEST['number_client']) ? $_REQUEST['number_client'] : null;
+            $url = $link_scan;
+            $data = get_data_curl($url);
+            $total_cmt = $data['data']['item_rating_summary']['rating_total'];
+            if($total_cmt < 36){
+              $number_client = floor(($total_cmt / 6) + 1);
+            }
+
+            $shopid = $data['data']['ratings'][0]['shopid'];
+            $itemid = $data['data']['ratings'][0]['itemid'];
+            $data_merge = [];
+            for ($i = 0; $i < $number_client; $i++) {
+                $link = "https://shopee.vn/api/v2/item/get_ratings?filter=0&flag=1&itemid=" . $itemid . "&limit=6&offset=" . $i * 6 . "&shopid=" . $shopid . "&type=0";
+                $data_total_client = get_data_curl($link);
+
+                $data_merge = array_merge($data_total_client['data']['ratings'], $data_merge);
+            }
+
+            //print_r($data_merge);
+            // print_r($data);
+            print_r(json_encode($data_merge));
+
+            break;
+
+        case 'get_product_detail':
+            $shopid = isset($_REQUEST['shopid']) ? $_REQUEST['shopid'] : null;
+            $itemid = isset($_REQUEST['itemid']) ? $_REQUEST['itemid'] : null;
+            $page = isset($_REQUEST['pager']) ? $_REQUEST['pager'] : 0;
+            if ($page == 0) {
+                $offset = 0;
+            }
+            if ($page > 0) {
+                $offset = ($page - 1) * 6;
+            }
+            $url_product = 'https://shopee.vn/api/v2/item/get?itemid=' . $itemid . '&shopid=' . $shopid . '';
+            $url_shop_extra = 'https://shopee.vn/api/v4/product/get_shop_info?shopid=' . $shopid . '';
+            $url_cmt = "https://shopee.vn/api/v2/item/get_ratings?filter=0&flag=1&itemid=" . $itemid . "&limit=6&offset=" . $offset . "&shopid=" . $shopid . "&type=0";
+            $data_product = get_data_curl($url_product);
+            $data_shop_extra = get_data_curl($url_shop_extra);
+            $data_cmt['rating'] = get_data_curl($url_cmt);
+            $username = $data_shop_extra['data']['account']['username'];
+            $url_shop = 'https://shopee.vn/api/v4/shop/get_shop_detail?username=' . $username . '';
+            $data_shop = get_data_curl($url_shop);
+            $data_merge_pr_sh = [];
+            $data_merge = [];
+            $data_merge_pr_sh = array_merge($data_product, $data_shop);
+            $data_merge = array_merge($data_merge_pr_sh, $data_cmt);
+            print_r(json_encode($data_merge));
+            break;
+
+        case 'create_file':
+            $name_file = isset($_REQUEST['name_file']) ? $_REQUEST['name_file'] : null;
+            $id_client = isset($_REQUEST['id_client']) ? $_REQUEST['id_client'] : null;
+            db_insert('client_table')->fields(array(
+                'namefileClient' => $name_file,
+                'UserId' => $_SESSION['userId'],
+                'data' => $id_client,
+            ))->execute();
+            $query = db_select('client_table', 'cb' );
+            $query->fields('cb',array( 'data', 'namefileClient' ));
+            $query->where('UserId = :UserId',array(':UserId' => $_SESSION['userId'] ));
+            $data = $query->execute()->fetchAll();
+            print_r(json_encode($data));
+            break;
+
+        case 'add_client_in_file':
+            $name_file = isset($_REQUEST['name_file']) ? $_REQUEST['name_file'] : null;
+            $id_client = isset($_REQUEST['id_client']) ? $_REQUEST['id_client'] : null;
+            //lay data tu db de ti ghep voi data moi
+            $query = db_select('client_table', 'cb' );
+            $query->fields('cb',array( 'data' ));
+            $query->where('namefileClient = :namefileClient', array(':namefileClient' => $name_file));
+            $data = $query->execute()->fetchAll();
+            $id = $data[0]->data . ',' . $id_client;
+            $id_arr = explode(',', $id);
+            $id_new = array_unique($id_arr); // loai bo nhung id trung nhau trong mang
+            $id_new = implode(',' , $id_new);
+
+            //sau khi ghep data moi thi add vao db
+            $query = db_update('client_table');
+            $query->expression('data', ':data', array(':data' => $id_new));
+            $query->where('namefileClient = :namefileClient', array(':namefileClient' => $name_file));
+            $query->execute();
+
+            //lay data sau khi da ghep data moi
+            $query = db_select('client_table', 'cb' );
+            $query->fields('cb',array( 'data' ));
+            $query->where('namefileClient = :namefileClient', array(':namefileClient' => $name_file));
+            $data_new = $query->execute()->fetchAll();
+            print_r(json_encode($data_new));
+            break;
+        case 'before_follow':
+
+            $username = isset($_REQUEST['username']) ? $_REQUEST['username'] : null;
+            $password = isset($_REQUEST['password']) ? $_REQUEST['password'] : null;
+            $file_client = isset($_REQUEST['file_client']) ? $_REQUEST['file_client'] : null;
+            $num_client = isset($_REQUEST['num_client']) ? $_REQUEST['num_client'] : null;
+            $status = isset($_REQUEST['status']) ? $_REQUEST['status'] : null;
+            token($username, $password, $file_client, $num_client, $status);
+            break;
+        case 'follow':
+
+            $file_client = isset($_REQUEST['file_client']) ? $_REQUEST['file_client'] : null;
+            $num_client = isset($_REQUEST['num_client']) ? $_REQUEST['num_client'] : null;
+            $sleep_time = isset($_REQUEST['sleep_time']) ? $_REQUEST['sleep_time'] : null;
+            $spc_ec = isset($_REQUEST['spc_ec']) ? $_REQUEST['spc_ec'] : null;
+            $token = isset($_REQUEST['token']) ? $_REQUEST['token'] : null;
+            follow($file_client, $num_client, $sleep_time, $spc_ec, $token);
+            break;
+        case 'deletefile':
+            unlink(dirname(__FILE__). '/cookie_shopee.txt');
+            break;
+
+        case 'change_pass':
+
+            $c_pass = isset($_REQUEST['c_pass']) ? $_REQUEST['c_pass'] : null;
+            $n_pass = isset($_REQUEST['n_pass']) ? $_REQUEST['n_pass'] : null;
+            $n_pass_verify = isset($_REQUEST['n_pass_verify']) ? $_REQUEST['n_pass_verify'] : null;
+            $query = db_select('user_table', 'ut');
+            $query->fields('ut');
+            $query->where('Id = :id', array(':id' => $_SESSION['userId']));
+            $data = $query->execute()->fetchObject();
+            if ($c_pass == $n_pass) {
+                $success[] = 'change_lose';
+                $html = '<span style="background-color: #ed9296">Đổi mật khẩu không thành công</span>';
+                echo $html;
+            } elseif ($c_pass != $data->password) {
+                $success[] = 'change_lose';
+                $html = '<span style="background-color: #ed9296">Đổi mật khẩu không thành công</span>';
+                echo $html;
+            } elseif ($n_pass != $n_pass_verify) {
+                $success[] = 'change_lose';
+                $html = '<span style="background-color: #ed9296">Đổi mật khẩu không thành công</span>';
+                echo $html;
+            } else {
+                $query = db_update('user_table');
+                $query->expression('password', ':password', array(':password' => $n_pass));
+                $query->where('Id = :id', array(':id' => $_SESSION['userId']));
+                $query->execute();
+                $success[] = 'change_success';
+                $html = '<span style="background-color: #bdf3bd">Đổi mật khẩu thành công</span>';
+                echo $html;
+            }
+            if (isset($_POST['remember2'])) { //kiểm tra xem có check nhớ mật khẩu hay không?
+                setcookie('email', '', time() + 3600, '/', '', 0, 0);
+                setcookie('pass', $n_pass, time() + 3600, '/', '', 0, 0);
+            } else {
+                setcookie('email', '', time() - 3600, '/', '', 0, 0);
+                setcookie('pass', '', time() - 3600, '/', '', 0, 0);
+            }
+            break;
+
+        case 'register':
+            $fullname = isset($_REQUEST['fullname']) ? $_REQUEST['fullname'] : null;
+            $phone = isset($_REQUEST['phone']) ? $_REQUEST['phone'] : null;
+            $mail = isset($_REQUEST['mail']) ? $_REQUEST['mail'] : null;
+            $password = isset($_REQUEST['password']) ? $_REQUEST['password'] : null;
+            $repassword = isset($_REQUEST['repassword']) ? $_REQUEST['repassword'] : null;
+
+            $index = 'no_avt.png';
+            if($password == $repassword){
+                $id = db_insert('user_table')->fields(array(
+                    'name' => $fullname,
+                    'phone' => $phone,
+                    'mail' => $mail,
+                    'password' => $password,
+                    'image' => $index,
+                ))->execute();
+
+                drupal_goto('home/'.$id);
+                $id = arg(1);
+                $data = null;
+                $query = db_select('user_table', 'ut');
+                $query->fields('ut');
+                $query->condition('ut.Id',$id,'=');
+                $data = $query->execute()->fetchObject();
+                $name = $data->name;
+                $_SESSION['name'] = $name;
+                $userId = $data->Id;
+                $_SESSION['userId'] = $userId;
+            }
+            break;
+
+        case 'login':
+            $mail = isset($_REQUEST['mail']) ? $_REQUEST['mail'] : null;
+            $pass = isset($_REQUEST['pass']) ? $_REQUEST['pass'] : null;
+            $check = isset($_REQUEST['check']) ? $_REQUEST['check'] : null;
+            $query = db_select('user_table', 'ut');
+            $query->fields('ut');
+            $query->condition('ut.mail',$mail,'=')&&
+            $query->condition('ut.password',$pass,'=');
+            $data = $query->execute()->fetchObject();
+
+            if ($data->mail == $mail || $data->password == $pass){
+                $name = $data->name;
+                $_SESSION['name'] = $name;
+                $userId = $data->Id;
+                $_SESSION['userId'] = $userId;
+                if ($check == 'active') { //kiểm tra xem có check nhớ mật khẩu hay không?
+                    setcookie('mail',$mail,time()+3600,'/','',0,0);
+                    setcookie('pass',$pass,time()+3600,'/','',0,0);
+                }else {
+                    setcookie('mail', '', time() - 3600, '/', '', 0, 0);
+                    setcookie('pass', '', time() - 3600, '/', '', 0, 0);
+                }
+                $arr = json_encode(array('check' => 'ok','stt' => $userId));
+               // $arr = json_encode($arr);
+                print_r($arr);
+            }else{
+                $html = '<span style="background-color: #e9c4c6;margin-bottom: -20px">Đăng nhập không thành công!</span><span style="background-color: #e9c4c6">Kiểm tra lại email hoặc mật khẩu!</span>';
+                $arr = json_encode(array('check' => 'not_ok','stt' => $html));
+                print_r($arr);
+
+            }
+            break;
+    }
+}
+function shopee_init(){
+}
+
+
+function shopee_theme(){
+    $themes['home'] = array('template' => 'templates/home', 'arguments' => array('data' => ''));
+    $themes['shopee'] = array('template' => 'templates/shopee', 'arguments' => array('data' => ''));
+    $themes['spy_shopee'] = array('template' => 'templates/spy_shopee', 'arguments' => array('data' => ''));
+    $themes['tracking'] = array('template' => 'templates/tracking', 'arguments' => array('data' => ''));
+    $themes['scan_customer'] = array('template' => 'templates/scan_customer', 'arguments' => array('data' => ''));
+    $themes['create_client_file'] = array('template' => 'templates/create_client_file', 'arguments' => array('data' => ''));
+    $themes['follow_customer'] = array('template' => 'templates/follow_customer', 'arguments' => array('data' => ''));
+    $themes['product_detail'] = array('template' => 'templates/product_detail', 'arguments' => array('data' => ''));
+    $themes['loading'] = array('template' => 'templates/loading', 'arguments' => array('data' => ''));
+    $themes['detail_lots_of_product'] = array('template' => 'templates/detail_lots_of_product', 'arguments' => array('data' => ''));
+    $themes['page_number'] = array('template' => 'templates/page_number', 'arguments' => array('data' => ''));
+    return $themes;
+
+}
+
+function dangxuat(){
+    $data = null;
+    unset($_SESSION['name']);
+    session_destroy();
+    drupal_goto('home');
+    return;
+}
+function get_data_curl($url){
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36');
+    curl_setopt($ch, CURLOPT_REFERER, 'https://www.google.com/');
+    curl_setopt($ch, CURLOPT_ENCODING, '');
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+    $data = curl_exec($ch);
+    curl_close($ch);
+    $data = json_decode($data, true);
+    return $data;
+
+}
+function home(){
+
+    $data = null;
+    return theme('home',array('data' => $data));
+}
+
+function shopee(){
+    $data = null;
+    return theme('shopee',array('data' => $data));
+}
+function spy_shopee(){
+
+    $data = null;
+    return theme('spy_shopee',array('data' => $data));
+}
+function tracking(){
+    $data = null;
+
+    return theme('tracking',array('data' => $data));
+}
+function scan_customer(){
+
+    $data = null;
+    $query = db_select('client_table', 'cb' );
+    $query->fields('cb',array( 'data', 'namefileClient' ));
+    $query->where('UserId = :UserId',array(':UserId' => $_SESSION['userId'] ));
+    $data = $query->execute()->fetchAll();
+    return theme('scan_customer',array('data' => $data));
+}
+function create_client_file($array){
+
+    $data = $array;
+    return theme('create_client_file',array('data' => $data));
+}
+function follow_customer(){
+    $data = null;
+    $query = db_select('client_table', 'cb' );
+    $query->fields('cb',array( 'data', 'namefileClient' ));
+    $query->where('UserId = :UserId',array(':UserId' => $_SESSION['userId'] ));
+    $data = $query->execute()->fetchAll();
+    return theme('follow_customer',array('data' => $data));
+}
+function product_detail(){
+
+    $data = null;
+    return theme('product_detail',array('data' => $data));
+}
+function loading(){
+    $data = null;
+    return theme('loading',array('data' => $data));
+}
+function detail_lots_of_product(){
+    $data = null;
+    return theme('detail_lots_of_product',array('data' => $data));
+}
+function page_number(){
+    $data = null;
+    return theme('page_number',array('data' => $data));
+}
+
+function LoginShopee($SP_Username,$SP_Pass) {
+
+    //Khởi tạo chung cho toàn bộ request bên dưới
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0");
+    $cookie_jar = '/cookie_shopee.txt';
+    curl_file_create(dirname(__FILE__) . $cookie_jar);
+    curl_setopt($ch, CURLOPT_COOKIESESSION, TRUE);
+    curl_setopt($ch, CURLOPT_COOKIEJAR, dirname(__FILE__) . $cookie_jar);
+    curl_setopt($ch, CURLOPT_COOKIEFILE, dirname(__FILE__) . $cookie_jar);
+
+   // print_r(dirname(__FILE__) . $cookie_jar);die;
+    // Request lấy cookie ban đầu
+    curl_setopt($ch, CURLOPT_URL, "https://shopee.vn/buyer/login/");
+    curl_exec($ch);
+    // echo file_get_contents($cookie_jar) .'<br><br>';
+
+    //Khởi tạo các dữ liệu đầu vào cho request Login
+    $csrf_token = csrftoken();
+
+    $header = array(
+        'x-csrftoken: '. $csrf_token,
+        'x-requested-with: XMLHttpRequest',
+        'referer: https://shopee.vn/buyer/login/',
+    );
+
+    $data = array(
+        "login_key" => $SP_Username,
+        "login_type" => "username",
+        "password_hash" => CryptPass($SP_Pass),
+        "captcha" => "",
+        "remember_me" => "true"
+    );
+    $data = http_build_query($data);
+
+    //Request login
+    curl_setopt($ch, CURLOPT_URL, "https://shopee.vn/buyer/login/login_post/");
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+    curl_setopt($ch, CURLOPT_COOKIE, "csrftoken=" . $csrf_token);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+    // curl_setopt($ch, CURLOPT_POSTFIELDSIZE, strlen($data));
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_HEADER, 1);
+    $response = curl_exec($ch);
+   // echo $response;
+    $explode = explode('set-cookie: SPC_', $response);
+    // print_r($explode);
+    for($i = 0; $i < count($explode); $i++){
+        if(substr($explode[$i], 0, 2) == 'EC'){
+            $SPC_EC =  trim($explode[$i], ' ');
+            $data_convert['SPC_EC'] = $SPC_EC;
+        }
+    }
+    $data_convert['token'] = $csrf_token;
+   // echo json_encode($data_convert);
+    //Request lấy thông tin tài khoản sau khi đã đăng nhập thành công
+    curl_setopt($ch, CURLOPT_URL, "https://shopee.vn/api/v1/account_info/?need_cart=0&skip_address=1");
+    $response = curl_exec($ch);
+    $explode = explode('secure', $response);
+    $explode_json = rtrim($explode[1], ')');
+    $explode_after = json_decode($explode_json);
+    $shopid =  $explode_after->shopid;
+    $name_shop = convert_shopid_to_name($shopid);
+    $data_convert['name_shop'] = $name_shop;
+   // echo json_encode($data_convert);
+    return json_encode($data_convert);
+}
+function convert_shopid_to_name($shopid){
+    $url = 'https://shopee.vn/api/v4/shop/get_shop_detail?shopid='.$shopid.'&username=';
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36');
+    curl_setopt($ch, CURLOPT_REFERER, 'https://www.google.com/');
+    curl_setopt($ch, CURLOPT_ENCODING, '');
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+    $data = curl_exec($ch);
+    curl_close($ch);
+    $data = json_decode($data, true);
+    $name_shop = $data['data']['name'];
+    return $name_shop;
+}
+function CryptPass($pass){
+    return hash("sha256", md5($pass));
+}
+function csrftoken() {
+    $karakter = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    $PanjangKarakter = strlen($karakter);
+    $acakString = '';
+    for ($i = 0; $i < 32; $i++) {
+        $acakString .= $karakter[rand(0, $PanjangKarakter - 1)];
+    }
+    return $acakString;
+}
+function token($username, $password, $file_client, $num_client, $status){
+    // Allow CORS để API có thể hoạt động được từ một miền khác
+    if (isset($_SERVER['HTTP_ORIGIN'])) {
+        header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+        header('Access-Control-Allow-Credentials: true');
+        header('Access-Control-Max-Age: 86400');    // cache for 1 day
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+
+        if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD']))
+            header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+
+        if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']))
+            header("Access-Control-Allow-Headers:        {$_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']}");
+
+        exit(0);
+    }
+
+
+        $phone = $_GET['SHOP_PHONE'];
+        $phone = '84394694362';
+        $pass = $password;
+
+
+        //Request GET truy cập để lưu Cookie
+        $c = curl_init();
+        curl_setopt($c, CURLOPT_URL, "https://shopee.vn/api/v2/authentication/login");
+        curl_setopt($c, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0");
+        curl_setopt($c, CURLOPT_HEADER, 1);
+        curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($c, CURLOPT_FOLLOWLOCATION, 1);
+        curl_setopt($c, CURLOPT_SSL_VERIFYPEER, 0);
+        $content = curl_exec($c);
+        $cookies = array();
+        preg_match_all('/Set-Cookie:(?<cookie>\s{0,}.*)$/im', $content, $cookies);
+        $data = $cookies['cookie'];
+
+
+        $cookie = "";
+        foreach ($data as $cok) {
+            $cok = explode('; ', $cok)[0];
+            $cookie .= $cok . "; ";
+        }
+
+        // CURL Login
+        $csrf = rand_string(32);
+
+        $user = $phone;
+        $passwordHash = hash('sha256', md5($pass));
+        //print_r($passwordHash);
+        $curl = curl_init();
+
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => "https://shopee.vn/buyer/login",
+            CURLOPT_RETURNTRANSFER => true,
+            // CURLOPT_HEADER => true,
+            CURLOPT_COOKIEJAR => dirname(__FILE__) . "/cookie/$phone.txt",
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => "------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=login_key\r\n\r\n$user\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=login_type\r\n\r\nphone\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=password_hash\r\n\r\n$passwordHash\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=captcha\r\n\r\n\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=remember_me\r\n\r\nfalse\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--",
+            CURLOPT_HTTPHEADER => array(
+                "Content-Type: application/x-www-form-urlencoded",
+                "Postman-Token: e497829c-e531-46b4-b48d-8b942410b349",
+                "accept: */*",
+                "accept-encoding: gzip, deflate, br",
+                "accept-language: en-US,en;q=0.9,vi-VN;q=0.8,vi;q=0.7",
+                "authority: shopee.vn",
+                "cache-control: no-cache",
+                "content-type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW",
+                "cookie: _gcl_au=1.1.980110088.1567079476; csrftoken=".$csrf."; _fbp=fb.1.1567079476668.692301882; _hjid=2be41738-f9b7-4838-b0dc-226ffb695725; ".$cookie." AMP_TOKEN=^%^24NOT_FOUND; _ga=GA1.2.1734820971.1567079479; _gid=GA1.2.625706896.1567079479",
+                "origin: https://shopee.vn",
+                "referer: https://shopee.vn/",
+                "sec-fetch-mode: cors",
+                "sec-fetch-site: same-origin",
+                "user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36",
+                "x-api-source: pc",
+                "x-csrftoken: $csrf",
+                "x-requested-with: XMLHttpRequest"
+            ),
+        ));
+
+
+    //GET SPC_EC AND TOKEN LOGIN
+    $JSON = LoginShopee($username,$password);
+    if($status == 2){
+        print_r($JSON);
+    }
+    //GET DATA INTO INPUT
+    if($file_client != ''){
+        $data = null;
+        $query = db_select('client_table', 'cb' );
+        $query->fields('cb',array( 'data' ));
+        $query->where('namefileClient = :namefileClient',array(':namefileClient' => $file_client ));
+        $data = $query->execute()->fetchAll();
+        $array_id_client = explode(',',$data[0]->data);
+        if($status == 1){
+            $arr_name_client = array();
+            for ($j = 0; $j < $num_client; $j++) {
+                $id_client = trim($array_id_client[$j]);
+                $name_client = convert_shopid_to_name($id_client);
+                array_push($arr_name_client, $name_client);
+            }
+            $object = new stdClass();
+            foreach ($arr_name_client as $key => $value)
+            {
+                $object->$key = $value;
+            }
+            print_r(json_encode($object));
+        }
+    }
+
+
+
+//     get_contents();
+//
+//
+//        //print_r($csrf);
+//        $response = curl_exec($curl);
+//        $err = curl_error($curl);
+//
+//        curl_close($curl);
+//
+//        if ($err) {
+//            echo "cURL Error #:" . $err;
+//        } else {
+//            // echo $response;
+//            $resultA = json_decode($response, true);
+//            print_r($resultA);
+//        }
+//
+//
+//        //CURL lấy Vouchers
+//        $curl = curl_init();
+//
+//        curl_setopt_array($curl, array(
+//            CURLOPT_URL => "https://shopee.vn/api/v2/voucher_wallet/get_vouchers?type=0&offset=0&limit=12",
+//            CURLOPT_RETURNTRANSFER => true,
+//            CURLOPT_ENCODING => "",
+//            CURLOPT_MAXREDIRS => 10,
+//            CURLOPT_TIMEOUT => 30,
+//            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+//            CURLOPT_CUSTOMREQUEST => "GET",
+//            CURLOPT_COOKIEFILE => dirname(__FILE__) . "/cookie/$phone.txt",
+//            CURLOPT_HTTPHEADER => array(
+//                "Postman-Token: 7a37837f-b3aa-4ea6-85b9-6eb396238cf1",
+//                "accept: */*",
+//                "accept-encoding: gzip, deflate, br",
+//                "accept-language: en-US,en;q=0.9,vi-VN;q=0.8,vi;q=0.7",
+//                "authority: shopee.vn",
+//                "cache-control: no-cache",
+//                "if-none-match: 5e4b575a405e87601445b50891ddaafe",
+//                "if-none-match-: 55b03-ceb9b31554f36b4e12f8679b13f0ae80",
+//                "referer: https://shopee.vn/user/voucher-wallet/?type=0",
+//                "sec-fetch-mode: cors",
+//                "sec-fetch-site: same-origin",
+//                "user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36",
+//                "x-api-source: pc",
+//                "x-requested-with: XMLHttpRequest"
+//            ),
+//        ));
+//
+//        $response = curl_exec($curl);
+//        $err = curl_error($curl);
+//        curl_close($curl);
+//
+//        if ($err) {
+//            echo "cURL Error #:" . $err;
+//        } else {
+//            $resultB = json_decode($response, true);
+//            $result = array_merge($resultA, $resultB);
+//           // echo json_encode($result);
+//        }
+}
+
+
+function follow($file_client, $num_client, $sleep_time, $spc_ec, $token){
+    if($file_client != ''){
+        $data = null;
+        $query = db_select('client_table', 'cb' );
+        $query->fields('cb',array( 'data' ));
+        $query->where('namefileClient = :namefileClient',array(':namefileClient' => $file_client ));
+        $data = $query->execute()->fetchAll();
+        $array_id_client = explode(',',$data[0]->data);
+    }
+
+    for ($i = 0; $i < $num_client; $i++) {
+        sleep($sleep_time - 1);
+        $string = trim($array_id_client[$i]);
+        $ch = curl_init();
+        $url = "https://shopee.vn/api/v4/shop/follow";
+        $headers = array(
+            'x-csrftoken:' . $token . '',
+            'x-requested-with: XMLHttpRequest',
+            'accept: application/json',
+            'cookie:' . $spc_ec,
+            'Content-Type:application/json',
+            'https://shopee.vn/api/v4/shop/follow',
+            'X-Requested-With: XMLHttpRequest',
+            'X-KL-Ajax-Request: Ajax_Request',
+            'x-api-source: pc',
+            'Referer:https://shopee.vn/shop/'.$string,
+            //'Content-Length: ' . strlen($data_string)
+        );
+        $head = array_map('trim', $headers);
+        $payload = json_encode(array("shopid" => (int)$string));
+
+        curl_setopt($ch, CURLOPT_URL, $url);
+
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $head);
+        $html = curl_exec($ch);
+        //var_dump($html);
+    }
+
+}
+
+
+//LOGIN SHOPEE
+//Tạo chuỗi kí tự random
+function rand_string( $length ) {
+
+    $chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    return substr(str_shuffle($chars),0,$length);
+
+}
+
+function get_contents(){
+    error_reporting(E_ALL);
+    ini_set('display_errors', 'On');
+    header('Content-Type: text/plain; charset=utf-8');
+
+    $curl = curl_init();
+    curl_setopt($curl, CURLOPT_URL, 'https://shopee.vn/api/v4/cart/mini');
+    curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+    curl_setopt($curl, CURLOPT_POST, 0);
+    curl_setopt($curl, CURLOPT_HEADER, 1);
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($curl, CURLOPT_FOLLOWLOCATION, 1);
+    $out = curl_exec($curl);
+    curl_close ($curl);
+
+    $out = preg_split('/(\r?\n){2}/', $out, 2);
+    $headers = $out[0];
+    $headersArray = preg_split('/\r?\n/', $headers);
+    $headersArray = array_map(function($h) {
+        return preg_split('/:\s{1,}/', $h, 2);
+    }, $headersArray);
+
+    $tmp = [];
+    foreach($headersArray as $h) {
+        $tmp[strtolower($h[0])] = isset($h[1]) ? $h[1] : $h[0];
+    }
+    $headersArray = $tmp; $tmp = null;
+//  $headersArray contains your headers
+//  print_r($headersArray);
+}
+
+
+
+
